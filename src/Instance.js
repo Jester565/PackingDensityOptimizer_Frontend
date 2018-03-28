@@ -3,14 +3,21 @@ import { Table, Form, Row, Col, Input, Button, Section, Icon, Collapsible, Colla
 import './Instances.css';
 
 class Instance extends Component {
-    static onSet = new Set(["RUNNING", "PROVISIONING", "STAGING"]);
+    static onSet = new Set(["RUNNING"]);
     static offSet = new Set(["STOPPED", "TERMINATED"]);
 
     constructor(props) {
         super();
-        this.state = {
-            status: props.status
-        };
+    }
+
+    onClick() {
+        console.log("ONCLICK");
+        if (Instance.onSet.has(this.props.status)) {
+            this.props.onStop(this.props.name);
+        }
+        else if (Instance.offSet.has(this.props.status)) {
+            this.props.onStart(this.props.name);
+        }
     }
 
     render() { 
@@ -18,17 +25,17 @@ class Instance extends Component {
         var buttonIcon = "compare arrows";
         var buttonClass = "disabled";
         
-        if (Instance.onSet.has(this.state.status)) {
+        if (Instance.onSet.has(this.props.status)) {
             buttonText = "Stop";
             buttonIcon = "power_settings_new";
             buttonClass = "";
-        } else if (Instance.offSet.has(this.state.status)) {
+        } else if (Instance.offSet.has(this.props.status)) {
             buttonText = "Start";
             buttonIcon = "play_arrow";
             buttonClass = "";
         }
         return (
-            <CollapsibleItem className='Instance-Red' header='us-west-2' icon='cloud_circle'>
+            <CollapsibleItem className='Instance-Black' header={this.props.name} icon='cloud_circle' onSelect={()=>{}}>
                 <Table className='Instance-Black'>
                     <thead>
                         <tr>
@@ -40,7 +47,7 @@ class Instance extends Component {
                     </thead>
                     <tbody>
                         <tr>
-                            <td>{this.state.status}</td>
+                            <td>{this.props.status}</td>
                             <td>{this.props.name}</td>
                             <td>{this.props.machineType}</td>
                             <td>{this.props.ip}</td>
@@ -48,7 +55,7 @@ class Instance extends Component {
                     </tbody>
                 </Table>
                 <Row>
-                    <Button className={buttonClass} iconwaves='light'><Icon>{buttonIcon}</Icon>{buttonText}</Button>
+                    <Button className={buttonClass} iconwaves='light' onClick={this.onClick.bind(this)}><Icon>{buttonIcon}</Icon>{buttonText}</Button>
                 </Row>
             </CollapsibleItem>
         );
@@ -57,4 +64,3 @@ class Instance extends Component {
 
 export default Instance;
 
-                

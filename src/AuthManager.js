@@ -44,6 +44,10 @@ class AuthManager {
             cb("CognitoUser is null");
         }
     }
+
+    getIdToken() {
+        return this.idToken;
+    }
     
     getUsername() {
         this.cognitoUser.getUsername();

@@ -30,3 +30,8 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+.signOut {
+  background-color: #3f3939;
+  color: lightblue;
+}
