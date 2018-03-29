@@ -93,7 +93,6 @@ class App extends Component {
         <UserStats />
         <Instances />
         <Simulations />
-        <ThreeSimCanvas />
         </div>
       );
     }

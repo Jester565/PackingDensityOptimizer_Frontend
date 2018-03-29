@@ -18,134 +18,89 @@ class ThreeSimCanvas extends React.Component {
             angle1: 0,
             angle2: 0,
             dist: 5,
-            pos1: new THREE.Vector3(-2, -2.0, -2.0),
-            pos2: new THREE.Vector3(-3.1, 0.0, 0.0),
-            pos3: null,
-            r1: 1.5,
-            r2: 1.5,
-            r3: 1.5,
             xOff: 0,
             yOff: 0,
-            zOff: 0
+            zOff: 0,
+            spheres: null
         };
         this.dragging = false;
-        var result = this.setTangentToWall(this.state.r3, 2);
-        if (result != null) {
-            this.state.pos3 = result;
-        } else {
-            this.state.pos3 = new THREE.Vector3(-100, -100, -100);
-        }
     }
 
-    setTangentCircle(tr, circTheta) {
-        var p1 = this.state.pos1;
-        var p2 = this.state.pos2;
-        var r1 = this.state.r1;
-        var r2 = this.state.r2;
-        console.log(p1.x);
-        var l = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2) + Math.pow(p2.z - p1.z, 2));
-		//Circles must be close enough so target can touch both of them
-		if (l - r1 - r2 > tr * 2) {
-			return;
-        }
-        console.log("L: ", l);
-		
-		//Calculates distance from p2 to the point on the line made between p1 and p2 tangent to the tangentPoint
-		var d = (Math.pow(l, 2) + (r1 - r2) * (2 * tr + r1 + r2)) / (2 * l);
-		//Height of tangentPoint above or below line made between p1 and p2
-        var h = Math.sqrt(Math.pow(tr + r1, 2) - Math.pow(d, 2));
-        var unitVector = new THREE.Vector3((p2.x - p1.x)/l, (p2.y - p1.y)/l, (p2.z - p1.z)/l);
-        console.log("UV: ", unitVector);
-        var betweenPoint = new THREE.Vector3(unitVector.x * d + p1.x, unitVector.y *d + p1.y, unitVector.z * d + p1.z);
-        console.log("BP: ", betweenPoint);
-        var result = new THREE.Vector3(betweenPoint.x, betweenPoint.y, betweenPoint.z);
-
-        var theta = Math.acos(unitVector.z);
-        var costheta = Math.cos(theta);
-        var sintheta = Math.sin(theta);
-        var r = new THREE.Vector3(-unitVector.y, unitVector.x, 0);
-
-        var p = new THREE.Vector3(h * Math.cos(circTheta), h * Math.sin(circTheta), 0);
-
-        result.x += (costheta + (1 - costheta) * r.x * r.x) * p.x;
-        result.x += ((1 - costheta) * r.x * r.y - r.z * sintheta) * p.y;
-
-        result.y += ((1 - costheta) * r.x * r.y + r.z * sintheta) * p.x;
-        result.y += (costheta + (1 - costheta) * r.y * r.y) * p.y;
-
-        result.z += ((1 - costheta) * r.x * r.z - r.y * sintheta) * p.x;
-        result.z += ((1 - costheta) * r.y * r.z + r.x * sintheta) * p.y;
-
-        return result;
+    
+    componentWillMount() {
+        this.authManager = new AuthManager();
+        this.authManager.getCreds((function(err) {
+            if (!err) {
+                console.log("Authenticated");
+                this.sqs = new AWS.SQS();
+                //TODO: Loading sign and show error on failed login
+                this.recvFromQueue(this.sqs);
+            }
+        }).bind(this));
     }
 
-    setTangentToWall(tr, circleTheta) {
-        var p1 = this.state.pos1;
-        var r1 = this.state.r1;
-        var wall = {x: 2, r: 0, y: -5};
-        if (wall.x == 0) {
-            var result = this.getTangentPoint(tr, p1.x, r1, wall.y, (wall.r != 0), 0);
-            if (result == null) {
-                return null;
-            }
-            var rVec = new THREE.Vector3(result.pos, p1.y + result.h * Math.cos(circleTheta), p1.z + result.h * Math.sin(circleTheta));
-            return rVec;
-        } else if (wall.x == 1) {
-            var result = this.getTangentPoint(tr, p1.y, r1, wall.y, (wall.r != 0), 0);
-            if (result == null) {
-                return null;
-            }
-            var rVec = new THREE.Vector3(p1.x + result.h * Math.cos(circleTheta), result.pos, p1.z + result.h * Math.sin(circleTheta));
-            return rVec;
-        } else if (wall.x == 2) {
-            var result = this.getTangentPoint(tr, p1.z, r1, wall.y, (wall.r != 0), 0);
-            if (result == null) {
-                return null;
-            }
-            var rVec = new THREE.Vector3(p1.x + result.h * Math.cos(circleTheta), p1.y + result.h * Math.sin(circleTheta), result.pos);
-            return rVec;
-        }
-        return null;
+    getQueueName() {
+        var str = this.authManager.getFederatedID().substr(this.authManager.getFederatedID().indexOf(':') + 1);
+        console.log(str);
+        return str;
     }
-
-    getTangentPoint(tr, circPos, r, linePos, max) {
-        var dif = Math.abs(circPos - linePos) - tr;
-        //not sure about dif < 0
-        if(dif > r + tr || dif < 0) {
-            return null;
-        }
-        var h = Math.sqrt(Math.pow(r + tr, 2) - Math.pow(dif, 2));
-        var result = {
-            pos: linePos + (!max * 2 - 1) * tr, 
-            h: h
+    
+    recvFromQueue(sqs) {
+        var recvParams = {
+            "MaxNumberOfMessages": 1,
+            "QueueUrl": "https://sqs.us-west-2.amazonaws.com/387396130957/" + this.getQueueName(),
+            WaitTimeSeconds: 20
         };
-        return result;
+
+        sqs.receiveMessage(recvParams, (function(err, data) {
+            if (err) {
+                console.log("ERR: ", JSON.stringify(err));
+                if (err.code == "AWS.SimpleQueueService.NonExistentQueue") {
+                    var createParams = {
+                        QueueName: this.getQueueName(),
+                        Attributes: {
+                            MessageRetentionPeriod: 60,
+                            VisibilityTimeout: 0
+                        }
+                    };
+                    sqs.createQueue(createParams, (function(err, data) {
+                        if (err) {
+                            console.log("Could not create queue: ", err);
+                            return;
+                        }
+                        console.log("Queue created");
+                        this.recvFromQueue(sqs);
+                    }).bind(this));
+                }
+                return;
+            }
+            if (data.Messages.length > 0) {
+                var message = data.Messages[0];
+                var msgId = JSON.parse(message.Body).msgId;
+                if (this.props.msgId == msgId) {
+                    var deleteParams = {
+                        QueueUrl: "https://sqs.us-west-2.amazonaws.com/387396130957/" + this.getQueueName(),
+                        ReceiptHandle: data.Messages[0].ReceiptHandle
+                    };
+                    sqs.deleteMessage(deleteParams, function(err, data) {
+                        if (err) {
+                            console.log("Failed to delete msg: ", err);
+                        }
+                    });
+                    this.onMsg(message.Body);
+                } else {
+                    console.log("GroupID did not match");
+                }
+            }
+            this.recvFromQueue(sqs);
+        }).bind(this));
     }
 
-    vecFromWallX(x) {
-        if (x == 0) {
-            return new THREE.Vector3(1, 0, 0);
-        } else if (x == 1) {
-            return new THREE.Vector3(0, 1, 0);
-        }
-        return new THREE.Vector3(0, 0, 1);
-    }
-
-    setTangentToWalls(tr, circleTheta) {
-        var wall1 = {x: 2, r: 0, y: -5};
-        var wall2 = {x: 1, r: 1, y: 5};
-        if (wall1.x == wall2.x) {
-            return null;
-        }
-        var vec1 = this.vecFromWallX(wall1.x);
-        var vec2 = this.vecFromWallX(wall2.x);
-        
-    }
-
-    onAnimate() {
-        this.setState({
-            woof: Math.random()
-        });
+    
+    onMsg(body) {
+        var bodyObj = JSON.parse(body);
+        console.log("MSG received: ", body);
+        this.setState({"spheres": bodyObj.sphereArr, "solWidth": bodyObj.w, "solHeight": bodyObj.h, "solLength": bodyObj.l, "solDensity": bodyObj.density});
     }
 
     componentDidMount() {
@@ -241,69 +196,72 @@ class ThreeSimCanvas extends React.Component {
     }
 
     render() {
-        var width = window.innerWidth;
-        var height = window.innerHeight;
-        var circRes = 32;
-        //console.log(Math.cos(this.state.angle1)*this.state.dist, Math.sin(this.state.angle1)*this.state.dist, Math.cos(this.state.angle2)*this.state.dist);
-        return(
-            <div ref="container">
-                <React3
-                    mainCamera="maincamera"
-                    width={width}
-                    height={height}
-                    onAnimate={this.onAnimate.bind(this)}>
-                        <scene>
-                            <perspectiveCamera
-                                name="maincamera"
-                                fov={75}
-                                aspect={width/height}
-                                near={0.1}
-                                far={1000}
-                                position={new THREE.Vector3(Math.cos(this.state.angle1) * this.state.dist + this.state.xOff, 
-                                    Math.cos(this.state.angle2) * this.state.dist + this.state.zOff,  
-                                    Math.sin(this.state.angle1) * this.state.dist  + this.state.yOff)}
-                                lookAt={new THREE.Vector3(this.state.xOff, this.state.zOff, this.state.yOff)}>
+        if (this.state.spheres != null) {
+            var width = window.innerWidth;
+            var height = window.innerHeight;
+            var circRes = 32;
 
-                            </perspectiveCamera>
-                            <mesh 
-                                position={this.state.pos1}
-                                >
-                                <sphereGeometry
-                                    radius={this.state.r1}
-                                    widthSegments={circRes}
-                                    heightSegments={circRes} />
-                                <meshBasicMaterial
-                                    color={0x00ff00}
-                                    wireframe={true} />
-                            </mesh>
-                            
-                           
-                            <mesh 
-                                position={this.state.pos3}
-                                >
-                                <sphereGeometry
-                                    radius={this.state.r3}
-                                    widthSegments={circRes}
-                                    heightSegments={circRes} />
-                                <meshBasicMaterial
-                                    color={0xff0000}
-                                    wireframe={true} />
-                            </mesh>
-                            <mesh 
-                               
-                                >
-                                <boxGeometry
-                                    width={10}
-                                    height={10}
-                                    depth={10} />
-                                <meshBasicMaterial
-                                    color={0x00ff00}
-                                    wireframe={true} />
-                            </mesh>
-                        </scene>
-                    </React3>
-                </div>
-            );
+            var cDif = 1.0 / this.state.spheres.length;
+            var c = 0;
+            var spheres = [];
+            for (var i = 0; i < this.state.spheres.length; i++) {
+                var sphereInfo = this.state.spheres[i];
+                spheres.push(
+                    <mesh
+                        position={new THREE.Vector3(sphereInfo.x, sphereInfo.y, sphereInfo.z)}>
+                        <sphereGeometry
+                        radius={sphereInfo.r}
+                        widthSegments={circRes}
+                        heightSegments={circRes} />
+                        <meshBasicMaterial
+                        color={new THREE.Color(1, c, 1)}
+                        wireframe={true} />
+                    </mesh>
+                );
+                c += cDif;
+            }
+            //console.log(Math.cos(this.state.angle1)*this.state.dist, Math.sin(this.state.angle1)*this.state.dist, Math.cos(this.state.angle2)*this.state.dist);
+            return(
+                <div ref="container">
+                    <React3
+                        mainCamera="maincamera"
+                        width={width}
+                        height={height}>
+                            <scene>
+                                <perspectiveCamera
+                                    name="maincamera"
+                                    fov={75}
+                                    aspect={width/height}
+                                    near={0.1}
+                                    far={1000}
+                                    position={new THREE.Vector3(Math.cos(this.state.angle1) * this.state.dist + this.state.xOff, 
+                                        Math.cos(this.state.angle2) * this.state.dist + this.state.zOff,  
+                                        Math.sin(this.state.angle1) * this.state.dist  + this.state.yOff)}
+                                    lookAt={new THREE.Vector3(this.state.xOff, this.state.zOff, this.state.yOff)}>
+
+                                </perspectiveCamera>
+                                {spheres}
+                                <mesh
+                                    position={new THREE.Vector3(this.state.solWidth/2.0, this.state.solHeight/2.0, this.state.solLength/2.0)}>
+                                    <boxGeometry
+                                        width={this.state.solWidth}
+                                        height={this.state.solHeight}
+                                        depth={this.state.solLength} />
+                                    <meshBasicMaterial
+                                        color={0x00ff00}
+                                        wireframe={true} />
+                                </mesh>
+                            </scene>
+                        </React3>
+                    </div>
+                );
+        } else {
+            return (<div ref="container">
+                <Col s={8} offset={"s2"}>
+                    <Preloader flashing size='big'/>
+                </Col>
+            </div>);
+        }
     }
   }
 

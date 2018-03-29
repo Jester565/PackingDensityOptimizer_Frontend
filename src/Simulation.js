@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Table, Form, Row, Col, Input, Button, Section, Icon, Collapsible, CollapsibleItem, Tabs, Tab } from 'react-materialize';
-import SimulationCanvas from './SimulationCanvas';
+import ThreeSimCanvas from './ThreeSimCanvas';
 import './Simulation.css'
 import AWS from 'aws-sdk';
 import AuthManager from './AuthManager';
@@ -16,7 +16,8 @@ class Simulation extends Component {
             msgId: null,
             type: "matchArea",
             width: 0,
-            height: 0
+            height: 0,
+            length: 0
         };
     }
 
@@ -42,7 +43,8 @@ class Simulation extends Component {
             msgId: msgId,
             type: this.state.type,
             w: parseFloat(this.state.width),
-            h: parseFloat(this.state.height)};
+            h: parseFloat(this.state.height),
+            l: parseFloat(this.state.length)};
 
         for (var i = 0; i < this.state.circleTypes.length; i++) {
             var circTypeStr = this.state.circleTypes[i];
@@ -137,13 +139,13 @@ class Simulation extends Component {
         }
         var simCanvas = null;
         if (this.state.msgId != null) {
-            simCanvas = <SimulationCanvas msgId={this.state.msgId} />
+            simCanvas = <ThreeSimCanvas msgId={this.state.msgId} />
         }
         var extraInput = null;
         if (this.state.type == "matchCount") {
             extraInput = (
                     <Row>
-                        <Col offset={"s2"} s={4}>
+                        <Col s={4}>
                             <Input s={12} label="Width" value={this.state.width} onChange={((evt) => {
                                 this.setState({width: evt.target.value});
                             }).bind(this)} />
@@ -151,6 +153,11 @@ class Simulation extends Component {
                         <Col s={4}>
                             <Input s={12} label="Height" value={this.state.height} onChange={((evt) => {
                                 this.setState({height: evt.target.value});
+                            }).bind(this)} />
+                        </Col>
+                        <Col s={4}>
+                            <Input s={12} label="Length" value={this.state.length} onChange={((evt) => {
+                                this.setState({length: evt.target.value});
                             }).bind(this)} />
                         </Col>
                     </Row>
