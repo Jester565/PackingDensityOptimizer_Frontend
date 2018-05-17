@@ -8,14 +8,23 @@ class Instance extends Component {
 
     constructor(props) {
         super();
+
+        this.state = {
+            clickDisabledState: null
+        }
     }
 
     onClick() {
-        console.log("ONCLICK");
         if (Instance.onSet.has(this.props.status)) {
+            this.setState({
+                clickDisabledState: "ON"
+            });
             this.props.onStop(this.props.name);
         }
         else if (Instance.offSet.has(this.props.status)) {
+            this.setState({
+                clickDisabledState: "OFF"
+            });
             this.props.onStart(this.props.name);
         }
     }
@@ -28,11 +37,15 @@ class Instance extends Component {
         if (Instance.onSet.has(this.props.status)) {
             buttonText = "Stop";
             buttonIcon = "power_settings_new";
-            buttonClass = "";
+            if (this.state.clickDisabledState != "ON") {
+                buttonClass = "";
+            }
         } else if (Instance.offSet.has(this.props.status)) {
             buttonText = "Start";
             buttonIcon = "play_arrow";
-            buttonClass = "";
+            if (this.state.clickDisabledState != "OFF") {
+                buttonClass = "";
+            }
         }
         return (
             <CollapsibleItem className='Instance-Black' header={this.props.name} icon='cloud_circle' onSelect={()=>{}}>

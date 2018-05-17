@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
 import { Table, Form, Row, Col, Input, Button, Section, Icon, Collapsible, CollapsibleItem, Tabs, Tab } from 'react-materialize';
 import ThreeSimCanvas from './ThreeSimCanvas';
-import './Simulation.css'
+import SimulationCanvas from './SimulationCanvas';
+import './Simulation.css';
 import AWS from 'aws-sdk';
 import AuthManager from './AuthManager';
 
@@ -17,7 +18,8 @@ class Simulation extends Component {
             type: "matchArea",
             width: 0,
             height: 0,
-            length: 0
+            length: 0,
+            precision: "0.0001"
         };
     }
 
@@ -38,7 +40,7 @@ class Simulation extends Component {
     onSubmit() {
         var msgId = (Math.random() * 100000).toString();
         var body = { circTypes: [], 
-            precision: 0.000001, 
+            precision: parseFloat(this.state.precision), 
             queueUrl: ("https://sqs.us-west-2.amazonaws.com/387396130957/" + this.getQueueName()),
             msgId: msgId,
             type: this.state.type,
@@ -49,9 +51,11 @@ class Simulation extends Component {
         for (var i = 0; i < this.state.circleTypes.length; i++) {
             var circTypeStr = this.state.circleTypes[i];
             var circTypeNum = {};
-            circTypeNum["count"] = parseInt(circTypeStr.count);
-            circTypeNum["radius"] = parseFloat(circTypeStr.radius);
-            body.circTypes.push(circTypeNum);
+            if (parseInt(circTypeStr.count) > 0) {
+                circTypeNum["count"] = parseInt(circTypeStr.count);
+                circTypeNum["radius"] = parseFloat(circTypeStr.radius)/2.0;
+                body.circTypes.push(circTypeNum);
+            }
         }
         
         //TODO: update region
@@ -134,12 +138,15 @@ class Simulation extends Component {
             buttonClass = 'disabled';
         }
         var divClasses = "card-panel grey lighten-5 z-depth-1";
-        if (this.props.hidden) {
-            divClasses += " hidden";
-        }
+        
         var simCanvas = null;
         if (this.state.msgId != null) {
-            simCanvas = <ThreeSimCanvas msgId={this.state.msgId} />
+            console.log("THREE2: ", this.props.three);
+            if (this.props.three) {
+                simCanvas = <ThreeSimCanvas msgId={this.state.msgId} hidden={this.props.hidden}/>
+            } else {
+                simCanvas = <SimulationCanvas msgId={this.state.msgId} hidden={this.props.hidden}/>
+            }
         }
         var extraInput = null;
         if (this.state.type == "matchCount") {
@@ -163,32 +170,49 @@ class Simulation extends Component {
                     </Row>
                 );
         }
-        return (
-            <div class={divClasses}>
+        if (!this.props.hidden) {
+            return (
+                <div class={divClasses}>
+                    <Section>
+                        <Row>
+                            {simCanvas}
+                        </Row>
+                        <Tabs className='Tab z-depth-1' onChange={this.onTabChange.bind(this)}>
+                            <Tab title="Match Area" />
+                            <Tab title="Match Count" />
+                        </Tabs>
+                        {circleForms}
+                        <Row>
+                            <Button floating large className='blue' waves='light' icon='add' onClick={((val) => {
+                                    let newCircleTypes = this.state.circleTypes.slice();
+                                    newCircleTypes.push({radius: "", count: ""});
+                                    this.setState({circleTypes: newCircleTypes});
+                                }).bind(this)} />
+                        </Row>
+                        {extraInput}
+                    </Section>
+                    <Row>
+                        <Col s={4} offset={"s4"}>
+                            <Input s={12} label="Precision" value={this.state.precision} onChange={((evt) => {
+                                this.setState({precision: evt.target.value});
+                            }).bind(this)} />
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Button waves='light' className={buttonClass} s={2} onClick={(this.onSubmit).bind(this)}>Submit</Button>
+                    </Row>
+                </div>
+            );
+        }
+        else {
+            return (<div>
                 <Section>
                     <Row>
                         {simCanvas}
                     </Row>
-                    <Tabs className='Tab z-depth-1' onChange={this.onTabChange.bind(this)}>
-                        <Tab title="Match Area" />
-                        <Tab title="Match Count" />
-                    </Tabs>
-                    {circleForms}
-                    <Row>
-                        <Button floating large className='blue' waves='light' icon='add' onClick={((val) => {
-                                let newCircleTypes = this.state.circleTypes.slice();
-                                newCircleTypes.push({radius: "", count: ""});
-                                this.setState({circleTypes: newCircleTypes});
-                            }).bind(this)} />
-                    </Row>
-                    {extraInput}
                 </Section>
-                <Row>
-                    <Button waves='light' className={buttonClass} s={2} onClick={(this.onSubmit).bind(this)}>Submit</Button>
-                </Row>
-            </div>
-        );
-        return (<div></div>);
+            </div>);
+        }
     }
 }
 

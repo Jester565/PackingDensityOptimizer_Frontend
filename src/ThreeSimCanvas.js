@@ -21,7 +21,8 @@ class ThreeSimCanvas extends React.Component {
             xOff: 0,
             yOff: 0,
             zOff: 0,
-            spheres: null
+            spheres: null,
+            idx: 0
         };
         this.dragging = false;
     }
@@ -59,8 +60,8 @@ class ThreeSimCanvas extends React.Component {
                     var createParams = {
                         QueueName: this.getQueueName(),
                         Attributes: {
-                            MessageRetentionPeriod: 60,
-                            VisibilityTimeout: 0
+                            MessageRetentionPeriod: '60',
+                            VisibilityTimeout: '0'
                         }
                     };
                     sqs.createQueue(createParams, (function(err, data) {
@@ -100,7 +101,7 @@ class ThreeSimCanvas extends React.Component {
     onMsg(body) {
         var bodyObj = JSON.parse(body);
         console.log("MSG received: ", body);
-        this.setState({"spheres": bodyObj.sphereArr, "solWidth": bodyObj.w, "solHeight": bodyObj.h, "solLength": bodyObj.l, "solDensity": bodyObj.density});
+        this.setState({"spheres": bodyObj.sphereArr, "solWidth": bodyObj.w, "solHeight": bodyObj.h, "solLength": bodyObj.l, "solDensity": bodyObj.density, "idx": bodyObj.sphereArr.length});
     }
 
     componentDidMount() {
@@ -124,19 +125,16 @@ class ThreeSimCanvas extends React.Component {
     }
 
     onDragStart(evt) {
-        console.log("Drag Start");
         this.dragging = true;
         this.startX = this.mouseX;
         this.startY = this.mouseY;
     }
 
     onDragEnd(evt) {
-        console.log("Drag end");
         this.dragging = false;    
     }
 
     onKeyPress(e) {
-        console.log("KEY PRESSED");
         if (this.active) {
             var keynum;
 
@@ -174,6 +172,18 @@ class ThreeSimCanvas extends React.Component {
                 this.setState({
                     dist: this.state.dist + 0.5
                 });
+            } else if (key == 'o' || key == 'O') {
+                if (this.state.spheres != null && this.state.idx < this.state.spheres.length) {
+                    this.setState({
+                        idx: this.state.idx + 1
+                    });
+                }
+            } else if (key == 'i' || key == 'I') {
+                if (this.state.spheres != null && this.state.idx > 1) {
+                    this.setState({
+                        idx: this.state.idx - 1
+                    });
+                }
             }
         }
     }
@@ -188,7 +198,6 @@ class ThreeSimCanvas extends React.Component {
             var yOff = (p2.y - p1.y);
             var angle1 = -xOff/400 + this.state.angle1;
             var angle2 = yOff/400 + this.state.angle2;
-            console.log("ANGLE1 ", angle1, " ANGLE2 ", angle2);
             this.setState({"angle1": angle1, "angle2": angle2});
             this.startX = this.mouseX;
             this.startY = this.mouseY;
@@ -199,12 +208,12 @@ class ThreeSimCanvas extends React.Component {
         if (this.state.spheres != null) {
             var width = window.innerWidth;
             var height = window.innerHeight;
-            var circRes = 32;
+            var circRes = 8;
 
-            var cDif = 1.0 / this.state.spheres.length;
+            var cDif = 1.0 / this.state.idx;
             var c = 0;
             var spheres = [];
-            for (var i = 0; i < this.state.spheres.length; i++) {
+            for (var i = 0; i < this.state.idx; i++) {
                 var sphereInfo = this.state.spheres[i];
                 spheres.push(
                     <mesh

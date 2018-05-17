@@ -15,10 +15,11 @@ class Simulations extends Component {
     render() {
         var simulations = [];
         for (var i = 0; i < this.state.simNames.length; i++) {
+            console.log("THREE: ", this.props.three);
             if (this.state.simI == i) {
-                simulations.push(<Simulation hidden={false}/>)
+                simulations.push(<Simulation three={this.props.three} hidden={false}/>)
             } else {
-                simulations.push(<Simulation hidden={true}/>)
+                simulations.push(<Simulation three={this.props.three} hidden={true}/>)
             }
         }
         return (

@@ -10,6 +10,8 @@ import {Tabs, Tab, Preloader, Row, Button, Col} from 'react-materialize';
 import AuthManager from './AuthManager';
 import ThreeSimCanvas from './ThreeSimCanvas';
 import './App.css';
+import BigSim from './BigSim';
+import BigSimCsv from './BigSimCsv';
 
 var LoginState = {
   WAITING: 0,
@@ -21,7 +23,8 @@ class App extends Component {
   constructor() {
     super();
     this.state = {
-      loggedIn: LoginState.WAITING
+      loggedIn: LoginState.WAITING,
+      tabNum: 0
     }
   }
 
@@ -41,7 +44,8 @@ class App extends Component {
   }
 
   onLogin() {
-    console.log("IN APPS NOW");
+    window.location.href = window.location.href;
+    /*
     this.setState({
       loggedIn: LoginState.WAITING
     });
@@ -57,6 +61,7 @@ class App extends Component {
         });
       }
     }).bind(this));
+    */
   }
 
   signOut() {
@@ -77,22 +82,37 @@ class App extends Component {
         <Login onSuccess={(this.onLogin).bind(this)}/>
         <Request /></div>);
     } else if (this.state.loggedIn == LoginState.LOGGEDIN) {
+      var body = null;
+      if (this.state.tabNum == 0) {
+        body = <div><Simulations /><BigSimCsv /></div>
+      } else if (this.state.tabNum == 1) {
+        body = <div><p>WIP</p></div>
+      } else if (this.state.tabNum == 2) {
+        body = <div><Simulations three="woof" /></div>
+      } else if (this.state.tabNum == 3) {
+        body = <Instances />
+      }
       body = (
         <div><Row>
           <Col s={10}>
-            <Tabs className='Tab z-depth-1'>
-              <Tab title="User Stats" />
-              <Tab title="Instances" />
-              <Tab title="Simulations" />
+            <Tabs className='Tab z-depth-1' onChange={((evt) => {
+              var tabNum = parseInt(evt[evt.length - 1]);
+              this.setState({
+                "tabNum": tabNum
+              });
+              console.log("TAB: " + tabNum);
+            }).bind(this)}>
+              <Tab title="2D Sims" />
+              <Tab title="2D Historical" />
+              <Tab title="3D Sims" />
+              <Tab title="VMs" />
             </Tabs>
           </Col>
           <Col s={2}>
             <Button className="signOut" waves='light' s={12} onClick={this.signOut.bind(this)}>Sign Out</Button>
           </Col>
         </Row>
-        <UserStats />
-        <Instances />
-        <Simulations />
+        {body}
         </div>
       );
     }

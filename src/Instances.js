@@ -30,8 +30,10 @@ class Instances extends Component {
             headers: {Authorization: this.authToken.getJwtToken()},
             queryParams: {}
         };
+        console.log("LISTING INSTANCES");
         this.apigClient.listcomputesGet(params, body, additionalParams)
             .then((function (result) {
+                console.log("GOT RESP");
                 this.setState({
                     instances: result.data
                 });

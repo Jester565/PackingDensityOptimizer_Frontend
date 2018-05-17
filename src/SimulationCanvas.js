@@ -98,8 +98,8 @@ class SimulationCanvas extends React.Component {
                     var createParams = {
                         QueueName: this.getQueueName(),
                         Attributes: {
-                            MessageRetentionPeriod: 60,
-                            VisibilityTimeout: 0
+                            MessageRetentionPeriod: '60',
+                            VisibilityTimeout: '0'
                         }
                     };
                     sqs.createQueue(createParams, (function(err, data) {
@@ -145,7 +145,8 @@ class SimulationCanvas extends React.Component {
     onMsg(body) {
         var bodyObj = JSON.parse(body);
         console.log("MSG received: ", body);
-        this.setState({"circles": bodyObj.circleArr, "solWidth": bodyObj.w, "solHeight": bodyObj.h, "solDensity": bodyObj.density});
+        var newScale = this.state.height/bodyObj.h;
+        this.setState({"circles": bodyObj.circleArr, "solWidth": bodyObj.w, "solHeight": bodyObj.h, "solDensity": bodyObj.density, "scale": newScale, "xOff": 0, "yOff": 0});
     }
 
     changeSize() {
@@ -160,19 +161,19 @@ class SimulationCanvas extends React.Component {
     }
 
     changeScale(scaleChange) {
-        var xOff = this.state.xOff - (this.state.width*scaleChange)/2.0;
-        var yOff = this.state.yOff - (this.state.height*scaleChange)/2.0;
-        this.setState({"xOff": xOff, "yOff": yOff, scale: (this.state.scale + scaleChange)});
+        var newScale = this.state.scale + scaleChange;
+        this.setState({
+            scale: newScale });
         this.startX = this.mouseX;
         this.startY = this.mouseY;
     }
     
     onScaleUp() {
-        this.changeScale(0.2);
+        this.changeScale(this.state.scale/3);
     }
 
     onScaleDown() {
-        this.changeScale(-0.2);
+        this.changeScale(-this.state.scale/3.0);
     }
     
     render() {
@@ -212,11 +213,17 @@ class SimulationCanvas extends React.Component {
                                         y={0}
                                         width={this.state.width}
                                         height={this.state.height}
+                                        fill={"white"}>
+                                    </Rect>
+                                    <Rect
+                                        x={-this.state.xOff * this.state.scale}
+                                        y={-this.state.yOff * this.state.scale}
+                                        width={this.state.solWidth * this.state.scale}
+                                        height={this.state.solHeight * this.state.scale}
                                         fill={"black"}>
                                     </Rect>
                                     {circles}
                                 </Group>
-                                <Text text="Density: 1000" />
                             </Layer>
                         </Stage>
                     </div>
@@ -240,21 +247,25 @@ class SimulationCanvas extends React.Component {
                 <Preloader flashing size='big'/>
             </Col>);
         }
-        return (
-            <div>
-                <Row>
-                    {content}
-                    <Col s={2}>
-                        <p>Density: {(this.state.solDensity != null) ? (this.state.solDensity) : "Loading..."}</p>
-                        <p>CircleArea: {(this.state.solWidth != null && this.state.solHeight != null && this.state.solDensity != null) ? ((this.state.solWidth * this.state.solHeight) * this.state.solDensity) : "Loading..."}</p>
-                        <p>BoxArea: {(this.state.solWidth != null && this.state.solHeight != null) ? (this.state.solWidth * this.state.solHeight) : "Loading..."}</p>
-                        <p>Width: {(this.state.solWidth != null) ? (this.state.solWidth) : "Loading..."}</p>
-                        <p>Height: {(this.state.solHeight != null) ? (this.state.solHeight) : "Loading..."}</p>
-                    </Col>
-                </Row>
-                {zoomBar}
-            </div>
-        );
+        if (!this.props.hidden) {
+            return (
+                <div class='hidden'>
+                    <Row>
+                        {content}
+                        <Col s={2}>
+                            <p>Density: {(this.state.solDensity != null) ? (this.state.solDensity) : "Loading..."}</p>
+                            <p>CircleArea: {(this.state.solWidth != null && this.state.solHeight != null && this.state.solDensity != null) ? ((this.state.solWidth * this.state.solHeight) * this.state.solDensity) : "Loading..."}</p>
+                            <p>BoxArea: {(this.state.solWidth != null && this.state.solHeight != null) ? (this.state.solWidth * this.state.solHeight) : "Loading..."}</p>
+                            <p>Width: {(this.state.solWidth != null) ? (this.state.solWidth) : "Loading..."}</p>
+                            <p>Height: {(this.state.solHeight != null) ? (this.state.solHeight) : "Loading..."}</p>
+                        </Col>
+                    </Row>
+                    {zoomBar}
+                </div>
+            );
+        } else {
+            return (<div></div>);
+        }
     }
   }
 
